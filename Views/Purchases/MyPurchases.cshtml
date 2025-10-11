@@ -1,0 +1,47 @@
+﻿@* Views/Purchases/MyPurchases.cshtml *@
+@model IEnumerable<Purchases>
+<div class="mt-3">
+    <h4>My Purchases</h4>
+
+    @if (Model?.Any() == true)
+    {
+        @foreach (var order in Model)
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <div>
+                        <strong>Order ID:#@order.OrderId</strong> – @order.CreateDate.ToString("dd-MMM-yyyy")
+                    </div>
+                    <div><strong>Total:</strong> @order.OrderTotal.ToString("C")</div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in order.Lines)
+                            {
+                                <tr>
+                                    <td>@line.ProductName</td>
+                                    <td class="text-end">@line.Quantity</td>
+                                    <td class="text-end">@line.UnitPrice.ToString("C")</td>
+                                    <td class="text-end">@line.LineTotal.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-secondary">No purchases yet.</div>
+    }
+</div>

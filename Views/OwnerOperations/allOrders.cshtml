@@ -1,0 +1,52 @@
+﻿@model IEnumerable<Order>
+@{
+    ViewData["Title"] = "allOrders";
+}
+
+<div style="width:100%" class="mt-2">
+    <h4> Orders </h4>
+    @if (Model != null && Model.Count() > 0)
+    {
+        <table class="table table-striped">
+
+            <tr>
+                <th>DateofOrder</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>MobileNo</th>
+                <th>Address</th>
+                <th>PaymentStat</th>
+                <th>OrderStat</th>
+                <th>Actions</th>
+
+            </tr>
+
+                @foreach (var order in Model)
+                {
+                    <tr> 
+                        <td>@order.CreateDate.ToString("dd-MM-yyyy")</td>
+                        <td>@order.Name</td>
+                        <td>@order.Email</td>
+                        <td>@order.MobileNumber</td>
+                        <td>@order.Address</td>
+                        <td>@order.PaymentMethod | @(order.isPaid? "Paid" : "Not Paid")</td>
+                        <td>@order.OrderStat.StatName</td>
+                        <td>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-@order.Id">Order Details</button>
+                            <a asp-action="updateOrderStatus" asp-route-orderId="@order.Id" class="btn btn-info">Change Status of Order</a>
+                            <a asp-action="togglePayStatus" asp-route-orderId="@order.Id" class="btn btn-info">Toggle for Payment Status</a>
+                            @await Html.PartialAsync("/Views/OwnerOperations/_OrderDetailsModal.cshtml", new OrderDetailModelDTO{DivId = order.Id.ToString(), OrderDetail = order.OrderDetail}) 
+                        </td>
+
+                    </tr>
+                }
+
+        </table>
+    }
+
+    else
+    {
+        
+    }
+</div>
+

@@ -1,0 +1,117 @@
+﻿@model ProductDisplayModel
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="my-2">
+  
+    <form asp-action="Index" method="get" class="row row-cols-lg-auto g-3 align-items-center">
+        <div class="col-12">
+            <label class="visually-hidden" for="categoryId">Categories</label>
+            <select class="form-select" id="categoryId" name="categoryId">
+                <option value="0" selected="@( ((int?)ViewBag.CategoryId ?? 0) == 0 ? "selected" : null )">All</option>
+                @foreach (var category in Model.Categories)
+                {
+                    var sel = ((int?)ViewBag.CategoryId ?? 0) == category.Id ? "selected" : null;
+                    <option value="@category.Id" selected="@sel">@category.CategoryName</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="visually-hidden" for="sterm">Search By Title</label>
+            <div class="input-group">
+                <div class="input-group-text"></div>
+                <input type="text" class="form-control" id="sterm" name="sterm"
+                       value="@(ViewBag.STerm as string)" placeholder="Search By Title" />
+            </div>
+        </div>
+
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+
+    
+</div>
+
+<div class="w-100 d-flex flex-wrap mt-4">
+    @foreach (var product in Model.Products) 
+    {
+        <div class="card mx-2 mb-4" style="width: 16rem;">
+            @if (string.IsNullOrEmpty(product.Image))
+                    {
+                <img style="width:100%;height:300px " src="../img/noimage.jpg" class="card-img-top" alt="NoImage">
+                    }
+
+            else
+            {
+
+                <img style="width:100%;height:300px" src="..." class="card-img-top" alt="HasImage">
+
+                    }
+
+            <div class="card-body">
+                <h5 class="card-title">@product.ProductName</h5>
+                <p class="card-text">
+                    <b> ShortDesc:</b>@product.ShortDesc
+                    <br />
+                    <b> Price:</b> $@product.Price
+                    <br />
+                   @*  <b>Current Stock:</b> @product.Quantity *@
+                </p>
+
+                @if (product.Quantity > 0)
+                {
+                    <button type="button" onclick="add(@product.Id)" class="btn btn-primary">Add to Cart</button>
+                }
+
+                else
+                {
+                    <span style="border: 1px solid;padding: 5px 8px; color:indianred;border-radius: 5px;"> OUT OF STOCK</span>
+                }
+
+
+
+
+
+            </div>
+        </div>
+ }
+
+</div>
+
+   
+@section Scripts{
+    <script>
+        async function add(productId) {
+            var userEl = document.getElementById("username");
+            if (userEl == null){
+                window.location.href="/Identity/Account/Login";
+            }
+
+            // var username = userEl.innerText;
+            // if (username.length <1) {
+            //     window.location.href="/Identity/Account/Login";
+
+          try {
+            var response = await fetch(`/Cart/AddItem?productId=${productId}`);
+            if (response.status==200) {
+            var result = await response.json(); // cartCount (int)
+            var cartCountEl = document.getElementById("cartCount");
+            cartCountEl.innerHTML = result;
+            window.location.href = "#cartCount"
+          }
+
+          }
+
+          catch (err) {
+            console.log(err);
+          }
+        }
+
+    
+    </script>
+}
+

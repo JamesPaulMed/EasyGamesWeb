@@ -1,0 +1,46 @@
+﻿@page
+@model EasyGamesWeb.Areas.Identity.Pages.Account.Manage.IndexModel
+
+
+@{
+    ViewData["Title"] = "Profile";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+}
+
+<h3>@ViewData["Title"]</h3>
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<span class="badge bg-dark">Tier: @Model.UserTier</span>
+
+@if (Model.TierInfo is not null && Model.UserTier != EasyGamesWeb.Constants.UserTier.Platinum)
+{
+    <div class="mt-2 alert alert-info p-2">
+        You need <strong>@Model.TierInfo.RemainingToNext.ToString("C")</strong> to reach the next tier.
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <form id="profile-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+            <div class="form-floating mb-3">
+                <input asp-for="Username" class="form-control" placeholder="Please choose your username." disabled />
+                <label asp-for="Username" class="form-label"></label>
+            </div>
+
+            
+            
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number."/>
+                <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+            </div>
+            <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
