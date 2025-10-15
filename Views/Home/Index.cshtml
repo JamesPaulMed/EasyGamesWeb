@@ -5,7 +5,6 @@
 }
 
 <div class="my-2">
-  
     <form asp-action="Index" method="get" class="row row-cols-lg-auto g-3 align-items-center">
         <div class="col-12">
             <label class="visually-hidden" for="categoryId">Categories</label>
@@ -32,86 +31,66 @@
             <button type="submit" class="btn btn-primary">Search</button>
         </div>
     </form>
-
-    
 </div>
 
 <div class="w-100 d-flex flex-wrap mt-4">
-    @foreach (var product in Model.Products) 
+    @foreach (var product in Model.Products)
     {
+        
+        var imgUrl = string.IsNullOrWhiteSpace(product.Image)
+        ? Url.Content("~/img/noimage.jpg")                   // fallback in wwwroot/img/noimage.jpg
+        : Url.Content($"~/uploads/{product.Image}");         // uploaded filename in wwwroot/uploads
+
         <div class="card mx-2 mb-4" style="width: 16rem;">
-            @if (string.IsNullOrEmpty(product.Image))
-                    {
-                <img style="width:100%;height:300px " src="../img/noimage.jpg" class="card-img-top" alt="NoImage">
-                    }
-
-            else
-            {
-
-                <img style="width:100%;height:300px" src="..." class="card-img-top" alt="HasImage">
-
-                    }
+            <img src="@imgUrl"
+                 alt="@product.ProductName"
+                 class="card-img-top"
+                 style="width:100%;height:300px;object-fit:cover;" />
 
             <div class="card-body">
                 <h5 class="card-title">@product.ProductName</h5>
                 <p class="card-text">
-                    <b> ShortDesc:</b>@product.ShortDesc
+                    <b>ShortDesc:</b> @product.ShortDesc
                     <br />
-                    <b> Price:</b> $@product.Price
+                    <b>Price:</b> @product.Price.ToString("C")
                     <br />
-                   @*  <b>Current Stock:</b> @product.Quantity *@
+                    @* <b>Current Stock:</b> @product.Quantity *@
                 </p>
 
                 @if (product.Quantity > 0)
                 {
                     <button type="button" onclick="add(@product.Id)" class="btn btn-primary">Add to Cart</button>
                 }
-
                 else
                 {
-                    <span style="border: 1px solid;padding: 5px 8px; color:indianred;border-radius: 5px;"> OUT OF STOCK</span>
+                    <span style="border: 1px solid;padding: 5px 8px; color:indianred;border-radius: 5px;">
+                        OUT OF STOCK
+                    </span>
                 }
-
-
-
-
-
             </div>
         </div>
- }
-
+    }
 </div>
 
-   
-@section Scripts{
+@section Scripts {
     <script>
         async function add(productId) {
             var userEl = document.getElementById("username");
-            if (userEl == null){
-                window.location.href="/Identity/Account/Login";
+            if (userEl == null) {
+                window.location.href = "/Identity/Account/Login";
+                return;
             }
-
-            // var username = userEl.innerText;
-            // if (username.length <1) {
-            //     window.location.href="/Identity/Account/Login";
-
-          try {
-            var response = await fetch(`/Cart/AddItem?productId=${productId}`);
-            if (response.status==200) {
-            var result = await response.json(); // cartCount (int)
-            var cartCountEl = document.getElementById("cartCount");
-            cartCountEl.innerHTML = result;
-            window.location.href = "#cartCount"
-          }
-
-          }
-
-          catch (err) {
-            console.log(err);
-          }
+            try {
+                var response = await fetch(`/Cart/AddItem?productId=${productId}`);
+                if (response.status === 200) {
+                    var result = await response.json();
+                    var cartCountEl = document.getElementById("cartCount");
+                    cartCountEl.innerHTML = result;
+                    window.location.href = "#cartCount";
+                }
+            } catch (err) {
+                console.log(err);
+            }
         }
-
-    
     </script>
 }
-

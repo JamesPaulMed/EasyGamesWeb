@@ -52,7 +52,7 @@ namespace EasyGamesWeb.Repositories
         {
             var orders = _db.Orders
                 .Include(x => x.OrderStat).Include(x => x.OrderDetail)
-                .ThenInclude(x => x.Product).ThenInclude(x => x.Categories).AsQueryable();
+                .ThenInclude(x => x.Product).ThenInclude(x => x.Category).AsQueryable();
 
             if (!getAll)
             {

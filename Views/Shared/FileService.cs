@@ -1,51 +1,48 @@
-﻿namespace EasyGamesWeb.Views.Shared;
+﻿using Microsoft.AspNetCore.Http;
 
-    public interface IFileService
-    {
-
-        void DeleteFile(string fileName);
-
-        Task<string> SaveFile(IFormFile file, string[] allowedExtensions);
-
-    }
-
-public class FileService : IFileService
+namespace EasyGamesWeb
 {
-    private readonly IWebHostEnvironment _environment;
-    public FileService(IWebHostEnvironment environment)
+    public class FileService
     {
+        private readonly string _rootFolder;
 
-        _environment = environment;
-    }
-
-    public async Task<string> SaveFile(IFormFile file, string[] allowedExtensions)
-    {
-        var wwwPath = _environment.WebRootPath;
-        var path = Path.Combine(wwwPath, "images");
-        if (!Directory.Exists(path))
+        public FileService(IWebHostEnvironment env)
         {
-            Directory.CreateDirectory(path);
+            _rootFolder = Path.Combine(env.WebRootPath ?? "wwwroot", "uploads");
+            if (!Directory.Exists(_rootFolder))
+            {
+                Directory.CreateDirectory(_rootFolder);
+            }
         }
-        var extension = Path.GetExtension(file.FileName);
-        if (!allowedExtensions.Contains(extension))
+
+        public async Task<string> SaveFile(IFormFile file, string[] allowedExtensions)
         {
+            if (file == null || file.Length == 0)
+                throw new FileNotFoundException("No file provided.");
 
-            throw new InvalidOperationException($"Only {string.Join(",", allowedExtensions)} are allowed");
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(ext))
+                throw new InvalidOperationException("Invalid file type.");
+
+            var fileName = $"{Guid.NewGuid():N}{ext}";
+            var fullPath = Path.Combine(_rootFolder, fileName);
+
+            using (var fs = new FileStream(fullPath, FileMode.Create))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            return fileName; 
         }
-        string fileName = $"{Guid.NewGuid()}{extension}";
-        string fileWithPath = Path.Combine(path, fileName);
-        using var stream = new FileStream(fileWithPath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        return fileName;
-    }
 
-    public void DeleteFile(string fileName)
-    {
-        var wwwPath = _environment.WebRootPath;
-        var fileWithPath = Path.Combine(wwwPath, "images\\", fileName);
-        if (!File.Exists(fileWithPath))
-        throw new FileNotFoundException(fileName);
-        File.Delete(fileWithPath); 
+        public void DeleteFile(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName)) return;
+            var fullPath = Path.Combine(_rootFolder, fileName);
+            if (File.Exists(fullPath))
+            {
+                File.Delete(fullPath);
+            }
+        }
     }
-
 }

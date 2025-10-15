@@ -1,105 +1,92 @@
 ﻿@model IEnumerable<Order>
 
-
 @{
+    ViewData["Title"] = "My Orders";
 }
-<div style=" width:100%" class="mt-2">
 
-    
+<div class="mt-2" style="width:100%">
 
     <h4>My Orders</h4>
-    @if (Model != null && Model.Count()>0)
+
+    @if (Model != null && Model.Any())
     {
         <table class="table table-bordered">
-            <tr>
-                <th> OrderDate</th>
-                <th> OrderStatus</th>   
-                
-            </tr>
-             @foreach (var order in Model)
-        {
-           <tr>
-               <td>@order.CreateDate.ToString("dd-MM-yyyy")</td>
-               <td>@order.OrderStat.StatName</td>
-             
-           </tr>
-                @if (order.OrderDetail != null && order.OrderDetail.Count > 0)
-                {
-                    <tr>
-                        <td>TOTAL: </td>
-                        <td>@(order.OrderDetail.Select(item => item.Product.Price * item.Quantity).Sum())</td>
-                    </tr>
-                
+            <thead>
                 <tr>
-               <td>
-                        <table class="table table-striped">
-                            <tr>
-                                <th>Product</th>
-                                <th>Image</th>
-                                <th>Unit Price(INT)</th>
-                                <th>Total Price</th>
-                            </tr>
+                    <th>OrderDate</th>
+                    <th>OrderStatus</th>
+                </tr>
+            </thead>
 
+            <tbody>
+                @foreach (var order in Model)
+                {
+                    // Use UnitPrice saved on the order so historical totals are correct (OrderDetails.UnitPrice is double)
+                    decimal orderTotal = order?.OrderDetail?.Sum(od => (decimal)od.UnitPrice * od.Quantity) ?? 0m;
 
-                            @foreach (var item in order.OrderDetail)
+                    <tr>
+                        <td>@order.CreateDate.ToString("dd-MM-yyyy")</td>
+                        <td>@order.OrderStat?.StatName</td>
+                    </tr>
 
-                            {
-                                   
-                                <tr>
-                                    <td>@item.Product.ProductName</td>
-                                    <td>
-                                        @if (string.IsNullOrEmpty(item.Product.Image))
+                    <tr>
+                        <td><strong>TOTAL:</strong></td>
+                        <td>@orderTotal.ToString("C")</td>
+                    </tr>
+
+                    @if (order.OrderDetail != null && order.OrderDetail.Count > 0)
+                    {
+                        <tr>
+                            <td colspan="2" class="p-0">
+                                <table class="table table-striped mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Image</th>
+                                            <th class="text-end">Unit Price (x Qty)</th>
+                                            <th class="text-end">Line Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in order.OrderDetail)
                                         {
-                                            <img src="/img/noimage.jpg" style="width:80px; height:100px" />
+                                            var prod = item.Product; // singular nav prop
+                                            var fileName = prod?.Image;
+                                            var imgUrl = string.IsNullOrWhiteSpace(fileName)
+                                            ? Url.Content("~/img/noimage.jpg")
+                                            : Url.Content($"~/uploads/{fileName}");
+
+                                            decimal unit = (decimal)item.UnitPrice;
+                                            decimal lineTotal = unit * item.Quantity;
+
+                                            <tr>
+                                                <td>@(prod?.ProductName ?? "Unknown")</td>
+                                                <td>
+                                                    <img src="@imgUrl"
+                                                         alt="@(prod?.ProductName ?? "Product image")"
+                                                         style="width:80px;height:100px;object-fit:cover;" />
+                                                </td>
+                                                <td class="text-end">
+                                                    @unit.ToString("C") X @item.Quantity
+                                                </td>
+                                                <td class="text-end">
+                                                    @lineTotal.ToString("C")
+                                                </td>
+                                            </tr>
                                         }
-
-                                        else
-
-                                        {
-                                            <img src="/img/@item.Product.Image" style="width:80px; height:100px" />
-                                        }
-                                    </td>
-
-                                    <td>
-                                        @item.Product.Price X @item.Quantity
-                                    </td>
-
-                                    <td>
-                                        @(item.Product.Price* item.Quantity)
-                                    </td>
-
-                                </tr>
-
-                                    
-                            }
-
-                        </table>
-               </td>
-           </tr>
-
-        }
-        }
-
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
         </table>
 
-
         <a href="/Identity/Account/Manage" class="btn btn-dark m-2">Back</a>
-
-       
-
-
-
-
-
     }
-
     else
     {
         <h5>No Orders</h5>
     }
-
-
-
-
 </div>
-

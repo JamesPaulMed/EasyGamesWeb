@@ -1,5 +1,4 @@
 using EasyGamesWeb;
-using EasyGamesWeb.Views.Shared;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,10 +22,11 @@ builder.Services.AddTransient<IUserOrderRepository, UserOrderRepository>();
 builder.Services.AddTransient<IStocksRepository, StocksRepository>();
 builder.Services.AddTransient<ICategoryRepository, CategoryRepository>();
 builder.Services.AddTransient<IProductRepository, ProductRepository>();
-builder.Services.AddTransient<IFileService, FileService>();
 builder.Services.AddScoped<IUserPurchasesService, UserPurchasesService>();
 builder.Services.AddScoped<IUserSalesService, UserSalesService>();
 builder.Services.AddScoped<IAdminSalesService, AdminSalesService>();
+builder.Services.AddScoped<FileService>();
+
 
 builder.Services.AddScoped(_ => TierThresholds.Default);
 var app = builder.Build();
@@ -37,7 +37,7 @@ using (var scope = app.Services.CreateScope())
     await DbSeeder.SeedDefaultData(scope.ServiceProvider);
     await DbSeeder.SeedCategories(scope.ServiceProvider);
     await DbSeeder.SeedOrderStat(scope.ServiceProvider);
-
+    await DbSeeder.SeedProductsAndOwnerStock(scope.ServiceProvider);
 }
 
 
@@ -56,7 +56,7 @@ if (app.Environment.IsDevelopment())
         // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
         app.UseHsts();
     }
-
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseRouting();
 
