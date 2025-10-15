@@ -1,81 +1,95 @@
-﻿using EasyGamesWeb.Views.Shared;
+﻿using EasyGamesWeb.Models;                 // Product, Category
+using EasyGamesWeb.Models.DTOs;            // ProductsDTO
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Identity.Client;
-using System.Diagnostics.Eventing.Reader;
 
-namespace EasyGamesWeb.Controllers;
-
-[Authorize(Roles = nameof(Roles.Admin))]
-public class ProductController : Controller
+namespace EasyGamesWeb.Controllers
 {
-    private readonly IProductRepository _productRepo;
-    private readonly IFileService _fileService;
-    private readonly ICategoryRepository _categoryRepo;
-
-    public ProductController(IProductRepository productRepo, IFileService fileService, ICategoryRepository categoryRepo)
+    [Authorize(Roles = "Admin")]
+    public class ProductController : Controller
     {
-        _productRepo = productRepo;
-        _fileService = fileService;
-        _categoryRepo = categoryRepo;
-    }
+        private readonly IProductRepository _productRepo;
+        private readonly FileService _fileService;           
+        private readonly ICategoryRepository _categoryRepo;
 
-
-    public async Task<IActionResult> Index()
-    {
-        var product = await _productRepo.getProducts();
-        return View(product);
-    }
-
-    public async Task<IActionResult> addProduct ()
-    {
-        var categorySelect = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
+        public ProductController(
+            IProductRepository productRepo,
+            FileService fileService,
+            ICategoryRepository categoryRepo)
         {
-            Text = category.CategoryName,
-            Value = category.Id.ToString(),
-        });
-        ProductsDTO productToAdd = new () { CategoryList = categorySelect };
-        return View(productToAdd);
-    }
+            _productRepo = productRepo;
+            _fileService = fileService;
+            _categoryRepo = categoryRepo;
+        }
 
-    [HttpPost]
-
-    public async Task <IActionResult> addProduct(ProductsDTO productToAdd)
-    {
-        var categorySelectList = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
+        public async Task<IActionResult> Index()
         {
-            Text = category.CategoryName,
-            Value = category.Id.ToString(),
-        });
+            var products = await _productRepo.getProducts();
+            return View(products);
+        }
 
-        productToAdd.CategoryList = categorySelectList;
+        public async Task<IActionResult> addProduct()
+        {
+            var categorySelect = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
+            {
+                Text = category.CategoryName,
+                Value = category.Id.ToString(),
+            });
 
-        if (!ModelState.IsValid)
-             return View(productToAdd);
+            var vm = new ProductsDTO
+            {
+                CategoryList = categorySelect
+            };
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> addProduct(ProductsDTO productToAdd)
+        {
+            
+            productToAdd.CategoryList = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
+            {
+                Text = category.CategoryName,
+                Value = category.Id.ToString(),
+            });
+
+            if (!ModelState.IsValid)
+                return View(productToAdd);
 
             try
-            { 
-           
-                if (productToAdd.ImageFile != null)
+            {
+                if (productToAdd.ImageFile != null && productToAdd.ImageFile.Length > 0)
                 {
-                    if(productToAdd.ImageFile.Length > 1 * 1024 * 1024)
-                    {
+                    if (productToAdd.ImageFile.Length > 1 * 1024 * 1024)
                         throw new InvalidOperationException("Image file cannot be more than 1 MB");
-                    }
+
                     string[] allowedExtensions = [".jpeg", ".jpg", ".png"];
                     string imageName = await _fileService.SaveFile(productToAdd.ImageFile, allowedExtensions);
                     productToAdd.Image = imageName;
                 }
-                Product product = new()
+
+                
+                if (productToAdd.SellPrice > 0 && productToAdd.Price == 0)
+                    productToAdd.Price = productToAdd.SellPrice;
+
+                var product = new Product
                 {
                     Id = productToAdd.Id,
                     ProductName = productToAdd.ProductName,
-                    Image = productToAdd.Image,
-                    ShortDesc = productToAdd.ProductDescription,
                     CategoryId = productToAdd.CategoryId,
-                    Price = productToAdd.Price,
+                    ShortDesc = productToAdd.ProductDescription,
+                    Image = productToAdd.Image,
+                    Price = productToAdd.Price, 
+                    
+                    Source = productToAdd.Source,
+                    BuyPrice = productToAdd.BuyPrice,
+                    SellPrice = productToAdd.SellPrice > 0 ? productToAdd.SellPrice : productToAdd.Price,
+                    Sku = productToAdd.Sku,
+                    IsActive = productToAdd.IsActive
                 };
+
                 await _productRepo.addProduct(product);
                 TempData["SuccessMsg"] = "Successfully added";
                 return Redirect(nameof(addProduct));
@@ -85,156 +99,161 @@ public class ProductController : Controller
                 TempData["ErrorMsg"] = ex.Message;
                 return View(productToAdd);
             }
-
             catch (FileNotFoundException ex)
             {
                 TempData["ErrorMsg"] = ex.Message;
                 return View(productToAdd);
-
             }
-
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMsg"] = "Error in saving data";
                 return View(productToAdd);
             }
-
         }
 
-    public async Task<IActionResult> updateProduct(int id)
-    {
-        var product = await _productRepo.getProductById(id);
-        if (product == null)
-        {
-            TempData["ErrorMsg"] = $"Product with the id: {id} cannot be found";
-            return RedirectToAction(nameof(Index));
-        }
-
-        var categorySelectList = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
-        {
-            Text = category.CategoryName,
-            Value = category.Id.ToString(),
-            Selected = category.Id == product.CategoryId
-        });
-
-        ProductsDTO productToUpdate = new()
-        {
-            CategoryList = categorySelectList,
-            ProductName = product.ProductName,
-            CategoryId = product.CategoryId,
-            ProductDescription = product.ShortDesc,
-            Price = product.Price,
-            Image = product.Image,
-        };
-
-        return View(productToUpdate);
-
-    }
-
-    [HttpPost]
-
-    public async Task<IActionResult> updateProduct(ProductsDTO productToUpdate)
-    {
-        var categorySelectList = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
-        {
-            Text = category.CategoryName,
-            Value = category.Id.ToString(),
-            Selected = category.Id == productToUpdate.CategoryId
-        });
-
-        productToUpdate.CategoryList = categorySelectList;
-
-        if (!ModelState.IsValid)
-            return View(productToUpdate);
-
-        try
-        {
-            string oldImage = "";
-            if (productToUpdate.ImageFile != null)
-            {
-                if (productToUpdate.ImageFile.Length > 1 * 1024 * 1024)
-                {
-                    throw new InvalidOperationException("Image file can not exceed 1 MB");
-                }
-                string[] allowedExtensions = [".jpeg", ".jpg", ".png"];
-                string imageName = await _fileService.SaveFile(productToUpdate.ImageFile, allowedExtensions);
-                // hold the old image name. Because we will delete this image after updating the new
-                oldImage = productToUpdate.Image;
-                productToUpdate.Image = imageName;
-            }
-            // manual mapping of BookDTO -> Book
-            Product product = new()
-            {
-                Id = productToUpdate.Id,
-                ProductName = productToUpdate.ProductName,
-                CategoryId = productToUpdate.CategoryId,
-                ShortDesc = productToUpdate.ProductDescription,
-                Price = productToUpdate.Price,
-                Image = productToUpdate.Image
-            };
-            await _productRepo.updateProduct(product);
-            // if image is updated, then delete it from the folder too
-            if (!string.IsNullOrWhiteSpace(oldImage))
-            {
-                _fileService.DeleteFile(oldImage);
-            }
-            TempData["SuccessMsg"] = "Book is updated successfully";
-            return RedirectToAction(nameof(Index));
-        }
-        catch (InvalidOperationException ex)
-        {
-            TempData["ErrorMsg"] = ex.Message;
-            return View(productToUpdate);
-        }
-        catch (FileNotFoundException ex)
-        {
-            TempData["ErrorMsg"] = ex.Message;
-            return View(productToUpdate);
-        }
-        catch (Exception ex)
-        {
-            TempData["ErrorMsg"] = "Error on saving data";
-            return View(productToUpdate);
-        }
-    }
-
-    public async Task<IActionResult> deleteProduct(int id)
-    {
-        try
+        public async Task<IActionResult> updateProduct(int id)
         {
             var product = await _productRepo.getProductById(id);
             if (product == null)
             {
                 TempData["ErrorMsg"] = $"Product with the id: {id} cannot be found";
+                return RedirectToAction(nameof(Index));
             }
-            else
+
+            var categorySelectList = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
             {
-                await _productRepo.deleteProduct(product);
-                if (!string.IsNullOrWhiteSpace(product.Image))
+                Text = category.CategoryName,
+                Value = category.Id.ToString(),
+                Selected = category.Id == product.CategoryId
+            });
+
+            var vm = new ProductsDTO
+            {
+                Id = product.Id,
+                ProductName = product.ProductName,
+                CategoryId = product.CategoryId,
+                CategoryList = categorySelectList,
+                ProductDescription = product.ShortDesc,
+                Image = product.Image,
+                
+                Price = product.Price,
+                BuyPrice = product.BuyPrice,
+                SellPrice = product.SellPrice,
+                Source = product.Source,
+                Sku = product.Sku,
+                IsActive = product.IsActive
+            };
+
+            if (vm.SellPrice == 0 && vm.Price > 0)
+                vm.SellPrice = vm.Price;
+
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> updateProduct(ProductsDTO productToUpdate)
+        {
+            
+            productToUpdate.CategoryList = (await _categoryRepo.getCategories()).Select(category => new SelectListItem
+            {
+                Text = category.CategoryName,
+                Value = category.Id.ToString(),
+                Selected = category.Id == productToUpdate.CategoryId
+            });
+
+            if (!ModelState.IsValid)
+                return View(productToUpdate);
+
+            try
+            {
+                string? oldImage = null;
+
+                if (productToUpdate.ImageFile != null && productToUpdate.ImageFile.Length > 0)
                 {
-                    _fileService.DeleteFile(product.Image);
+                    if (productToUpdate.ImageFile.Length > 1 * 1024 * 1024)
+                        throw new InvalidOperationException("Image file can not exceed 1 MB");
+
+                    string[] allowedExtensions = [".jpeg", ".jpg", ".png"];
+                    string imageName = await _fileService.SaveFile(productToUpdate.ImageFile, allowedExtensions);
+
+                    oldImage = productToUpdate.Image; 
+                    productToUpdate.Image = imageName;
+                }
+
+                if (productToUpdate.SellPrice > 0 && productToUpdate.Price == 0)
+                    productToUpdate.Price = productToUpdate.SellPrice;
+
+                var product = new Product
+                {
+                    Id = productToUpdate.Id,
+                    ProductName = productToUpdate.ProductName,
+                    CategoryId = productToUpdate.CategoryId,
+                    ShortDesc = productToUpdate.ProductDescription,
+                    Image = productToUpdate.Image,
+                    Price = productToUpdate.Price,
+                    
+                    Source = productToUpdate.Source,
+                    BuyPrice = productToUpdate.BuyPrice,
+                    SellPrice = productToUpdate.SellPrice > 0 ? productToUpdate.SellPrice : productToUpdate.Price,
+                    Sku = productToUpdate.Sku,
+                    IsActive = productToUpdate.IsActive
+                };
+
+                await _productRepo.updateProduct(product);
+
+                if (!string.IsNullOrWhiteSpace(oldImage))
+                    _fileService.DeleteFile(oldImage);
+
+                TempData["SuccessMsg"] = "Product is updated successfully";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMsg"] = ex.Message;
+                return View(productToUpdate);
+            }
+            catch (FileNotFoundException ex)
+            {
+                TempData["ErrorMsg"] = ex.Message;
+                return View(productToUpdate);
+            }
+            catch
+            {
+                TempData["ErrorMsg"] = "Error on saving data";
+                return View(productToUpdate);
+            }
+        }
+
+        public async Task<IActionResult> deleteProduct(int id)
+        {
+            try
+            {
+                var product = await _productRepo.getProductById(id);
+                if (product == null)
+                {
+                    TempData["ErrorMsg"] = $"Product with the id: {id} cannot be found";
+                }
+                else
+                {
+                    await _productRepo.deleteProduct(product);
+                    if (!string.IsNullOrWhiteSpace(product.Image))
+                        _fileService.DeleteFile(product.Image);
                 }
             }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMsg"] = ex.Message;
+            }
+            catch (FileNotFoundException ex)
+            {
+                TempData["ErrorMsg"] = ex.Message;
+            }
+            catch
+            {
+                TempData["ErrorMsg"] = "error in deleting the data";
+            }
+            return RedirectToAction(nameof(Index));
         }
-        catch (InvalidOperationException ex)
-        {
-            TempData["ErrorMsg"] = ex.Message;
-        }
-
-        catch (FileNotFoundException ex)
-        {
-            TempData["ErrorMsg"] = ex.Message;
-        }
-
-        catch (Exception ex)
-        {
-            TempData["ErrorMsg"] = "error in deleting hte data";
-        }
-        return RedirectToAction(nameof(Index));
     }
-
-
-
 }
-
-

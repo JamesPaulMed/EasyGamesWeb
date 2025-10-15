@@ -1,9 +1,8 @@
-﻿using EasyGamesWeb.Models;
+﻿using EasyGamesWeb.Data;
+using EasyGamesWeb.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
-using System.Collections;
-using System.Net.WebSockets;
 
 namespace EasyGamesWeb.Repositories
 {
@@ -12,168 +11,162 @@ namespace EasyGamesWeb.Repositories
         private readonly ApplicationDbContext _db;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        public CartRepository(ApplicationDbContext db, UserManager<IdentityUser> userManager, IHttpContextAccessor httpContextAccessor)
+
+        public CartRepository(
+            ApplicationDbContext db,
+            UserManager<IdentityUser> userManager,
+            IHttpContextAccessor httpContextAccessor)
         {
             _db = db;
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
         }
+
         public async Task<int> AddItem(int productId, int qty)
         {
             string userId = getUserId();
-            using var transaction = _db.Database.BeginTransaction();
-            try { 
-            //cart gets saved
-            //cart details go into an error
-            
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
                 if (string.IsNullOrEmpty(userId))
                     throw new UnauthorizedAccessException("User is not logged in");
-            var cart = await getCart(userId);
-            if (cart is null)
-            {
-                cart = new Cart
-                {
-                    UserId = userId
-                };
-                _db.Carts.Add(cart);
-            }
 
-                _db.SaveChanges();
-                //Cart Details:
-                var cartItem = _db.CartDetails.FirstOrDefault(a => a.CartId == cart.Id && a.ProductId == productId);
+                var cart = await getCart(userId);
+                if (cart is null)
+                {
+                    cart = new Cart { UserId = userId };
+                    _db.Carts.Add(cart);
+                    await _db.SaveChangesAsync(); 
+                }
+
+                var cartItem = await _db.CartDetails
+                    .FirstOrDefaultAsync(cd => cd.CartId == cart.Id && cd.ProductId == productId);
+
                 if (cartItem is not null)
                 {
-
                     cartItem.Quantity += qty;
-
-
                 }
                 else
                 {
-                    var product = _db.Products.Find(productId);
+                    var product = await _db.Products.FindAsync(productId)
+                                 ?? throw new InvalidOperationException("Product not found");
+
+                    
                     cartItem = new CartDetails
                     {
                         ProductId = productId,
                         CartId = cart.Id,
                         Quantity = qty,
-                        UnitPrice = product.Price
+                        UnitPrice = (double)(product.SellPrice > 0 ? product.SellPrice : product.Price)
                     };
 
                     _db.CartDetails.Add(cartItem);
                 }
 
-                _db.SaveChanges();
-                transaction.Commit();
-
-           }
-            catch (Exception ex)
-            {
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
-            var cartItemCount = await getCartItemCount(userId);
-            return cartItemCount;
+            catch
+            {
+                await transaction.RollbackAsync();
+            }
+
+            return await getCartItemCount(userId);
         }
 
-         public async Task<int>RemoveItem(int productId)
+        public async Task<int> RemoveItem(int productId)
         {
             string userId = getUserId();
-            //using var transaction = _db.database.begintransaction();
+
             try
             {
-                //cart gets saved
-                //cart details go into an error
-
                 if (string.IsNullOrEmpty(userId))
-                    throw new UnauthorizedAccessException("user is not logged in");
-                var cart = await getCart(userId);
-                if (cart is null)
-                    throw new InvalidOperationException("Invalid Cart");
-                _db.SaveChanges();
-                //Cart Details:
-                var cartItem = _db.CartDetails.FirstOrDefault(a => a.CartId == cart.Id && a.ProductId == productId);
+                    throw new UnauthorizedAccessException("User is not logged in");
+
+                var cart = await getCart(userId) ?? throw new InvalidOperationException("Invalid cart");
+
+                var cartItem = await _db.CartDetails
+                    .FirstOrDefaultAsync(cd => cd.CartId == cart.Id && cd.ProductId == productId);
+
                 if (cartItem is null)
-                    throw new InvalidOperationException("There is no item in the cart");
-                else if (cartItem.Quantity == 1)
+                    throw new InvalidOperationException("There is no such item in the cart");
+                else if (cartItem.Quantity <= 1)
                     _db.CartDetails.Remove(cartItem);
                 else
-                    cartItem.Quantity = cartItem.Quantity - 1;
-                _db.SaveChanges();
-                //transaction.Commit();               
+                    cartItem.Quantity -= 1;
+
+                await _db.SaveChangesAsync();
             }
-            catch (Exception ex)
+            catch
             {
-            
+                
             }
-            var cartItemCount = await getCartItemCount(userId);
-            return cartItemCount;
+
+            return await getCartItemCount(userId);
         }
-        
+
         public async Task<Cart> getUserCart()
         {
             var userId = getUserId();
-            if (userId == null)
-                throw new InvalidOperationException("Invalid User");
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new InvalidOperationException("Invalid user");
+
             var cart = await _db.Carts
-               .Include (a=> a.cartDetails)
-               .ThenInclude(a => a.Products)
-               .ThenInclude(a => a.Stocks)
-               .Include(a => a.cartDetails)
-               .ThenInclude(a => a.Products)
-               .ThenInclude(a => a.Categories)
-               .Where(a => a.UserId == userId).FirstOrDefaultAsync();
+                .Include(c => c.cartDetails)
+                    .ThenInclude(cd => cd.Products)
+                        .ThenInclude(p => p.Stocks)
+                .Include(c => c.cartDetails)
+                    .ThenInclude(cd => cd.Products)
+                        .ThenInclude(p => p.Category) 
+                .FirstOrDefaultAsync(c => c.UserId == userId);
 
-            return cart;    
-
+            return cart!;
         }
-        public async Task <Cart> getCart(string userId)
+
+        public async Task<Cart> getCart(string userId)
         {
             var cart = await _db.Carts.FirstOrDefaultAsync(x => x.UserId == userId);
-            return cart;
+            return cart!;
         }
 
-        public async Task<int> getCartItemCount (string userId = "")
+        public async Task<int> getCartItemCount(string userId = "")
         {
             if (string.IsNullOrEmpty(userId))
-            {
                 userId = getUserId();
-            }
+
             var data = await (from cart in _db.Carts
-                              join cartDetail in _db.CartDetails
-                              on cart.Id equals cartDetail.CartId
+                              join cartDetail in _db.CartDetails on cart.Id equals cartDetail.CartId
                               where cart.UserId == userId
-                              select new { cartDetail.Id })
+                              select cartDetail.Id)
                               .ToListAsync();
+
             return data.Count;
         }
 
-
-        public async Task<bool> StartCheckout (CheckoutModel model)
+        public async Task<bool> StartCheckout(CheckoutModel model)
         {
-
-            using var transaction = _db.Database.BeginTransaction();
+            await using var transaction = await _db.Database.BeginTransactionAsync();
 
             try
             {
-                //move from cartdetail to order and order detail
-                //neworder , orderdetails
-                // remove data in cartdetails
-
                 var userId = getUserId();
                 if (string.IsNullOrEmpty(userId))
                     throw new UnauthorizedAccessException("User not logged in");
-                var cart = await getCart(userId);
-                if (cart is null)
-                    throw new InvalidOperationException("Not a valid cart");
-                var cartDetail = await _db.CartDetails.
-                    Where(a => a.CartId == cart.Id).Include(a=>a.Products).ToListAsync();
-                
+
+                var cart = await getCart(userId) ?? throw new InvalidOperationException("Not a valid cart");
+
+                var cartDetail = await _db.CartDetails
+                    .Where(cd => cd.CartId == cart.Id)
+                    .Include(cd => cd.Products)
+                    .ToListAsync();
+
                 if (cartDetail.Count == 0)
-                    throw new InvalidOperationException("Empty Cart");
+                    throw new InvalidOperationException("Empty cart");
 
+                var pendingRec = await _db.OrderStat.FirstOrDefaultAsync(s => s.StatName == "Pending")
+                                 ?? throw new InvalidOperationException("Order status does not have 'Pending'");
 
-                var pendingRec = _db.OrderStat.FirstOrDefault(s => s.StatName == "Pending");
-                if (pendingRec is null)
-                    throw new InvalidOperationException("Order status does not have pending status");
-                
                 var order = new Order
                 {
                     UserId = userId,
@@ -182,21 +175,18 @@ namespace EasyGamesWeb.Repositories
                     Email = model.Email,
                     MobileNumber = model.MobileNumber,
                     PaymentMethod = model.PaymentMethod,
-                    Address = model.Address, 
-                    isPaid = false, 
-                    OrderStatId = pendingRec.Id, //pend
+                    Address = model.Address,
+                    isPaid = false,
+                    OrderStatId = pendingRec.Id
                 };
-                   
+
                 _db.Orders.Add(order);
                 await _db.SaveChangesAsync();
 
-
                 foreach (var item in cartDetail)
                 {
-                    // Validate stock BEFORE writing line
-                    var stock = await _db.Stocks.FirstOrDefaultAsync(s => s.ProductId == item.ProductId);
-                    if (stock is null)
-                        throw new InvalidOperationException("Stocks is null");
+                    var stock = await _db.Stocks.FirstOrDefaultAsync(s => s.ProductId == item.ProductId)
+                                ?? throw new InvalidOperationException("Stocks is null");
 
                     if (item.Quantity <= 0)
                         throw new InvalidOperationException("Quantity must be positive");
@@ -213,13 +203,12 @@ namespace EasyGamesWeb.Repositories
                         
                         UnitPrice = item.UnitPrice,
 
-                       
-                        UnitCostAtSale = item.Products.CostPrice
+                        
+                        UnitCostAtSale = (double)item.Products.CostPrice
                     };
 
                     _db.OrderDetails.Add(orderDetail);
 
-                    
                     stock.Quantity -= item.Quantity;
                 }
 
@@ -234,15 +223,12 @@ namespace EasyGamesWeb.Repositories
                 await transaction.RollbackAsync();
                 return false;
             }
-
-
         }
 
         private string getUserId()
         {
-            var principal = _httpContextAccessor.HttpContext.User;
-            string userId = _userManager.GetUserId(principal);
-            return userId;
+            var principal = _httpContextAccessor.HttpContext?.User;
+            return principal == null ? string.Empty : _userManager.GetUserId(principal) ?? string.Empty;
         }
     }
 }
