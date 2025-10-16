@@ -1,0 +1,41 @@
+﻿@model IEnumerable<EasyGamesWeb.Models.ShopUser>
+@{
+    ViewData["Title"] = "Shop Assignments";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Shop Assignments</h3>
+    <a class="btn btn-primary" asp-action="Create">+ Assign User to Shop</a>
+</div>
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Shop</th>
+            <th>User</th>
+            <th>Manager</th>
+            <th style="width:140px;"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var x in Model)
+        {
+            <tr>
+                <td>@x.Shop.Name</td>
+                <td>@x.User.Email</td>
+                <td>@(x.IsManager ? "Yes" : "No")</td>
+                <td class="text-end">
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" name="shopId" value="@x.ShopId" />
+                        <input type="hidden" name="userId" value="@x.UserId" />
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove assignment?')">Remove</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

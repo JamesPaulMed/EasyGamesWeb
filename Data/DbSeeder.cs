@@ -9,12 +9,19 @@ namespace EasyGamesWeb.Data
     {
         public static async Task SeedDefaultData(IServiceProvider service)
         {
-            var userMgr = service.GetRequiredService<UserManager<IdentityUser>>();
-            var roleMgr = service.GetRequiredService<RoleManager<IdentityRole>>();
+            var userMgr = service.GetService<UserManager<IdentityUser>>();
+            var roleMgr = service.GetService<RoleManager<IdentityRole>>();
 
-            await roleMgr.CreateAsync(new IdentityRole(Roles.Admin.ToString()));
-            await roleMgr.CreateAsync(new IdentityRole(Roles.User.ToString()));
+            // Custom ShopOwner role
+            string[] roles = { Roles.Admin.ToString(), Roles.User.ToString(), "ShopOwner" };
 
+            foreach (var role in roles)
+            {
+                if (!await roleMgr.RoleExistsAsync(role))
+                    await roleMgr.CreateAsync(new IdentityRole(role));
+            }
+
+            // Create default Admin user (if not exists)
             var admin = new IdentityUser
             {
                 UserName = "admin@gmail.com",
@@ -27,7 +34,7 @@ namespace EasyGamesWeb.Data
             if (userInDb is null)
             {
                 await userMgr.CreateAsync(admin, "Admin@123");
-                await userMgr.AddToRoleAsync(admin, Roles.Admin.ToString());
+                await userMgr.AddToRoleAsync(admin, "Admin");
             }
         }
 

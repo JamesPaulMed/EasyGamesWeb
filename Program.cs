@@ -25,6 +25,9 @@ builder.Services.AddTransient<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IUserPurchasesService, UserPurchasesService>();
 builder.Services.AddScoped<IUserSalesService, UserSalesService>();
 builder.Services.AddScoped<IAdminSalesService, AdminSalesService>();
+builder.Services.AddScoped<IShopStockService, ShopStockService>();
+builder.Services.AddScoped<IShopAccessService, ShopAccessService>();
+builder.Services.AddScoped<IShopSalesService, ShopSalesService>();
 builder.Services.AddScoped<FileService>();
 
 

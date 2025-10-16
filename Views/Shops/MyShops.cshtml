@@ -1,0 +1,34 @@
+﻿@model IEnumerable<EasyGamesWeb.Models.Shop>
+@{
+    ViewData["Title"] = "My Shops";
+}
+<h3>My Shops</h3>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-secondary">No shops assigned.</div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-3">
+        @foreach (var s in Model)
+        {
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@s.Name</h5>
+                        <p class="card-text text-muted mb-1">@s.Location</p>
+                        <span class="badge @(s.IsActive ? "bg-success" : "bg-secondary")">
+                            @(s.IsActive ? "Active" : "Inactive")
+                        </span>
+                    </div>
+                    <div class="card-footer d-flex gap-2">
+                        <a class="btn btn-sm btn-outline-primary" asp-action="Pos" asp-route-shopId="@s.Id">Open POS</a>
+                        <a class="btn btn-sm btn-primary" asp-action="Stock" asp-route-shopId="@s.Id">Manage Stock</a>
+                       
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

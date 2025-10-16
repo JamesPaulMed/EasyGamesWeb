@@ -1,0 +1,110 @@
+﻿@model IEnumerable<EasyGamesWeb.Models.ShopInventory>
+@{
+    var shopId = (int)ViewBag.ShopId;
+    var shopName = (string)ViewBag.ShopName;
+    var customerId = ViewBag.CustomerId as int?;
+    var tier = ViewBag.Tier as string ?? "Guest";
+    ViewData["Title"] = $"POS – {shopName}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">POS – @shopName</h3>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" asp-action="MyShops">Back</a>
+    </div>
+</div>
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+@if (TempData["Err"] is string err)
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><strong>Customer</strong></div>
+            <div class="card-body">
+                <form asp-action="LookupCustomer" method="post" class="row g-2">
+                    <input type="hidden" name="shopId" value="@shopId" />
+                    <div class="col-12">
+                        <label class="form-label">Mobile phone</label>
+                        <input type="tel" name="phone" class="form-control" placeholder="e.g. 0400 123 456" />
+                    </div>
+                    <div class="col-12 d-grid">
+                        <button class="btn btn-primary" type="submit">Find / Create</button>
+                    </div>
+                </form>
+                <hr />
+                <div>
+                    <div><strong>Status:</strong> @tier</div>
+                    @if (customerId.HasValue)
+                    {
+                        <div><strong>Customer ID:</strong> @customerId</div>
+                        <div class="text-muted small">Discounts apply automatically by tier.</div>
+                    }
+                    else
+                    {
+                        <div class="text-muted small">Guest checkout (no discount).</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><strong>Sell Items</strong></div>
+            <div class="card-body">
+                <form asp-action="Checkout" method="post">
+                    <input type="hidden" name="shopId" value="@shopId" />
+                    <input type="hidden" name="customerId" value="@(customerId ?? null)" />
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-end">Stock</th>
+                                    <th style="width:120px;" class="text-end">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var i in Model)
+                                {
+                                    var low = i.Quantity <= 3;
+                                    var zeroOrBelow = i.Quantity <= 0;
+                                    <tr>
+                                        <td>@i.Product.ProductName</td>
+                                        <td class="text-end">@i.UnitPrice.ToString("C")</td>
+                                        <td class="text-end">
+                                            @i.Quantity
+                                            @if (zeroOrBelow)
+                                            {
+                                                <span class="badge bg-danger ms-2">At/Below 0</span>
+                                            }
+                                            else if (low)
+                                            {
+                                                <span class="badge bg-warning text-dark ms-2">Low</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="hidden" name="shopInventoryIds" value="@i.Id" />
+                                            <input type="number" name="quantities" class="form-control form-control-sm text-end" min="0" value="0" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-success">Checkout (No Cash)</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

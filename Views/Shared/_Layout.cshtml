@@ -37,35 +37,14 @@
                             <a class="nav-link" href="/UserOrder/UserOrders">My Orders</a>
                         </li>
                     }
-                    
 
-                    @if (User.IsInRole(Roles.Admin.ToString()))
+                    @if (User.IsInRole("ShopOwner"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link" href="/OwnerOperations/AllOrders">Orders</a>
+                            <a class="nav-link" asp-controller="Shops" asp-action="MyShops">My Shops</a>
                         </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Stocks/Index">Stocks</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Product/Index">AddProducts</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Category/Index">AddCategory</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Sales" asp-action="Dashboard">Sales Dashboard</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Users/Index">Users</a>
-                        </li>
-
                     }
+
                 </ul>
 
                 <partial name="_LoginPartial" />

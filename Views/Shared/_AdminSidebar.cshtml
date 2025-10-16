@@ -3,25 +3,29 @@
 {
     <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="adminOffcanvas" aria-labelledby="adminOffcanvasLabel" style="width: 280px;">
         <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="adminOffcanvasLabel">Admin</h5>
+            <h5 class="offcanvas-title text-light" id="adminOffcanvasLabel">Admin</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
 
         <div class="offcanvas-body p-0 d-flex flex-column">
             <div class="list-group list-group-flush">
 
-                <a class="list-group-item list-group-item-action list-group-item-dark"asp-controller="Sales" asp-action="Dashboard">Sales Dashboard</a>
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="Sales" asp-action="Dashboard">Sales Dashboard</a>
 
-                <a a class="nav-link" href="/OwnerOperations/AllOrders">Orders</a>
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="Shops" asp-action="Index"> Shops </a>
 
-                <a class="nav-link" href="/Stocks/Index">Stocks</a>
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="ShopAssignments" asp-action="Index"> Shop Assignments</a>
 
-                <a class="nav-link" href="/Product/Index">Products</a>
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="OwnerOperations" asp-action="allOrders"> Orders</a>
 
-                <a class="nav-link" href="/Category/Index">Categories</a>
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="Stocks" asp-action="Index"> Stocks </a>
 
-                <a class="nav-link" href="/Users/Index">Users</a>
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="Product" asp-action="Index"> Products</a>
 
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="Category" asp-action="Index"> Categories </a>
+
+                <a class="list-group-item list-group-item-action list-group-item-dark text-dark" asp-controller="Users" asp-action="Index"> Users </a>
+    
             </div>
         </div>
     </div>
