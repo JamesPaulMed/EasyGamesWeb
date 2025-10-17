@@ -1,4 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using EasyGamesWeb.Models.DTOs;
+using EasyGamesWeb.Models;
+using EasyGamesWeb.Data;
 
 namespace EasyGamesWeb.Repositories
 {
@@ -43,7 +46,10 @@ namespace EasyGamesWeb.Repositories
                                 {
                                     ProductId = product.Id,
                                     ProductName = product.ProductName,
-                                    Quantity = stockProduct == null ? 0 : stockProduct.Quantity
+                                    Quantity = stockProduct == null ? 0 : stockProduct.Quantity,
+                                    Source = product.Source,
+                                    BuyPrice = product.BuyPrice,
+                                    SellPrice = product.SellPrice
                                 }).ToListAsync();
             return stocks; 
         }

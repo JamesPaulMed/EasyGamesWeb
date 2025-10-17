@@ -1,4 +1,4 @@
-﻿@model IEnumerable<StocksDisplayModel>
+﻿@model IEnumerable<EasyGamesWeb.Models.DTOs.StocksDisplayModel>
 @{
 }
 
@@ -10,30 +10,60 @@
     <a asp-action="Index" asp-controller="Stocks" class="btn btn-primary">Clear</a>
 </form>
 
-<table class="table table-bordered">
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-end">Qty</th>
+            <th>Source</th>
+            <th class="text-end">Buy</th>
+            <th class="text-end">Sell</th>
+            <th class="text-end">Unit Profit</th>
+            <th class="text-end">Margin %</th>
+            <th class="text-end">Total Profit</th>
+            <th>Action</th>
+        </tr>
+    </thead>    
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.ProductName</td>
+            <td class="text-end">@item.Quantity</td>
+            <td>@item.Source</td>
+            <td class="text-end">@item.BuyPrice.ToString("C")</td>
+            <td class="text-end">@item.SellPrice.ToString("C")</td>
+            <td class="text-end">@item.UnitProfit.ToString("C")</td>
+            <td class="text-end">@((item.MarginPercent?.ToString("0.##") ?? "-"))%</td>
+            <td class="text-end">@item.TotalProfit.ToString("C")</td> @* <-- FIXED closing tag *@
+            <td>
+                <a asp-action="manageStocks"
+                   asp-controller="Stocks"
+                   asp-route-productId="@item.ProductId"
+                   class="btn btn-sm btn-info">Update</a>
+            </td>
+        </tr>
+    }
+    </tbody>
 
-    <tr>
-        <th>Product</th>
-        <th>Stock</th>
-        <th>Action</th>
-    </tr>
-    
-  
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.ProductName</td>
-                <td>@item.Quantity</td>
-
-                <td>
-
-                <a asp-action="manageStocks" asp-controller ="Stocks" asp-route-productId ="@item.ProductId" class="btn btn-info"> Update the Stock</a>
-               
-
-
-
-                </td>
-            </tr>
-        }
-   
+    <tfoot>
+    @{
+        var totalQty = Model.Sum(m => m.Quantity);
+        var totalProfit = Model.Sum(m => m.TotalProfit);
+        var avgMargin = Model.Where(m => m.MarginPercent.HasValue)
+                             .DefaultIfEmpty()
+                             .Average(m => m?.MarginPercent ?? 0m);
+    }
+        <tr class="fw-bold">
+            <td>Totals</td>
+            <td class="text-end">@totalQty</td>
+            <td></td>
+            <td class="text-end"></td>
+            <td class="text-end"></td>
+            <td class="text-end"></td>
+            <td class="text-end">@avgMargin.ToString("0.##")%</td>
+            <td class="text-end">@totalProfit.ToString("C")</td>
+            <td></td>
+        </tr>
+    </tfoot>
 </table>
