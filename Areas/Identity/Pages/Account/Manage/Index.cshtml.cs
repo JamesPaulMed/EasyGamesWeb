@@ -9,9 +9,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System;
+using EasyGamesWeb.Data;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace EasyGamesWeb.Areas.Identity.Pages.Account.Manage
 {
@@ -20,15 +22,17 @@ namespace EasyGamesWeb.Areas.Identity.Pages.Account.Manage
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly ApplicationDbContext _db;
         private readonly IUserSalesService _sales;
 
         public IndexModel(
             UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager, IUserSalesService sales)
+            SignInManager<IdentityUser> signInManager, IUserSalesService sales, ApplicationDbContext db)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _sales = sales;
+            _db = db;
         }
 
         /// <summary>
@@ -69,20 +73,30 @@ namespace EasyGamesWeb.Areas.Identity.Pages.Account.Manage
             [Phone]
             [Display(Name = "Phone number")]
             public string PhoneNumber { get; set; }
+
+            [Display(Name = "Receive promotional emails")]
+            public bool AllowMarketing { get; set; }
         }
 
-        private async Task LoadAsync(IdentityUser user)
-        {
-            var userName = await _userManager.GetUserNameAsync(user);
-            var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
 
-            Username = userName;
 
-            Input = new InputModel
-            {
-                PhoneNumber = phoneNumber
-            };
-        }
+       private async Task LoadAsync(IdentityUser user)
+{
+    var userName = await _userManager.GetUserNameAsync(user);
+    var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
+
+    Username = userName;
+
+    var pref = await _db.EmailPreferences
+        .AsNoTracking()
+        .FirstOrDefaultAsync(p => p.UserId == user.Id);
+
+    Input = new InputModel
+    {
+        PhoneNumber = phoneNumber,
+        AllowMarketing = pref?.AllowMarketing ?? true // default when no row yet
+    };
+}
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -131,6 +145,17 @@ namespace EasyGamesWeb.Areas.Identity.Pages.Account.Manage
                 }
             }
 
+            var pref = await _db.EmailPreferences.FirstOrDefaultAsync(p => p.UserId == user.Id);
+            if (pref == null)
+            {
+                pref = new EmailPreference { UserId = user.Id };
+                _db.EmailPreferences.Add(pref);
+            }
+            pref.AllowMarketing = Input.AllowMarketing;
+            pref.UpdatedUtc = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
             await _signInManager.RefreshSignInAsync(user);
             StatusMessage = "Your profile has been updated";
 
@@ -141,4 +166,6 @@ namespace EasyGamesWeb.Areas.Identity.Pages.Account.Manage
             return RedirectToPage();
         }
     }
+
+
 }

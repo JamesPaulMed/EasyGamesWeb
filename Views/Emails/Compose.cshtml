@@ -1,0 +1,43 @@
+﻿@model EmailBlast
+@{
+    ViewData["Title"] = "Email Users";
+}
+<h3>Email Users</h3>
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+<form asp-action="Compose" method="post">
+    <div class="mb-3">
+        <label class="form-label">Segment</label>
+        <select asp-for="Segment" class="form-select">
+            <option value="0">All Users</option>
+            <option value="1">Admins</option>
+            <option value="2">Shop Owners</option>
+            <option value="3">Tier: Bronze</option>
+            <option value="4">Tier: Silver</option>
+            <option value="5">Tier: Gold</option>
+            <option value="6">Tier: Platinum</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Subject" class="form-label"></label>
+        <input asp-for="Subject" class="form-control" />
+        <span asp-validation-for="Subject" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="BodyHtml" class="form-label">Body (HTML allowed)</label>
+        <textarea asp-for="BodyHtml" rows="8" class="form-control" placeholder="Write, email message here..."></textarea>
+        <span asp-validation-for="BodyHtml" class="text-danger"></span>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Send</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

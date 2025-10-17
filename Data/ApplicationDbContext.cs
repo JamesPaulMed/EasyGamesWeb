@@ -28,7 +28,7 @@ namespace EasyGamesWeb.Data
 
         public DbSet<OwnerStock> OwnerStocks => Set<OwnerStock>();
 
-
+        public DbSet<EmailPreference> EmailPreferences => Set<EmailPreference>();
 
         //Shops DbSets:
         public DbSet<Shop> Shops => Set<Shop>();
@@ -39,6 +39,7 @@ namespace EasyGamesWeb.Data
         public DbSet<ShopSaleLine> ShopSaleLines => Set<ShopSaleLine>();
 
 
+        //Emailing preference Dbsets
         protected override void OnModelCreating(ModelBuilder b)
         {
             base.OnModelCreating(b);
@@ -55,7 +56,9 @@ namespace EasyGamesWeb.Data
              .OnDelete(DeleteBehavior.Cascade);
 
 
-
+            b.Entity<EmailPreference>()
+           .HasIndex(x => x.UserId)
+           .IsUnique();
             // Shop items relationships and restriction  (su -> shopuser, s -> shops, si -> shop inventory)
 
 

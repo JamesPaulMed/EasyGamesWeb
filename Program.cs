@@ -28,6 +28,8 @@ builder.Services.AddScoped<IAdminSalesService, AdminSalesService>();
 builder.Services.AddScoped<IShopStockService, ShopStockService>();
 builder.Services.AddScoped<IShopAccessService, ShopAccessService>();
 builder.Services.AddScoped<IShopSalesService, ShopSalesService>();
+builder.Services.AddScoped<IMarketingEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IGroupEmailService, GroupEmailService>();
 builder.Services.AddScoped<FileService>();
 
 
